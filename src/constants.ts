@@ -15,12 +15,12 @@ export const PHYSICS = {
 export const DEFAULT_CAR: import('./types').CarConfig = {
   name: "New Car",
   totalWeightOz: 5.0,
-  weightDistribution: 0.2, // Rear weighted (80% rear)
+  weightDistribution: 0.5, // Balanced (50% rear)
   leftRightBias: 0.0,
-  axleSanded: true,
-  graphite: true,
-  wheelCant: 1.5,
-  raisedWheel: true,
+  axleSanded: false,
+  graphite: false,
+  wheelCant: 0.0,
+  raisedWheel: false,
   wheelbase: 4.375,
   dragCoefficient: 0.45,
   losslessTest: false,
