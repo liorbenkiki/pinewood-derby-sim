@@ -1,0 +1,5 @@
+{
+  "name": "Pinewood Derby Sim",
+  "description": "A physics-based Pinewood Derby car tuning simulator.",
+  "requestFramePermissions": []
+}
