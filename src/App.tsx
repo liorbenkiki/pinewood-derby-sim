@@ -8,6 +8,7 @@ import { CarConfig, SimulationResult, LeaderboardEntry, TrackConfig } from './ty
 import { DEFAULT_CAR, DEFAULT_TRACK } from './constants';
 import { simulateRace } from './utils/physics';
 import { PhysicsDebug } from './components/PhysicsDebug';
+import { MobileWarningModal } from './components/MobileWarningModal';
 
 export default function App() {
   const [config, setConfig] = useState<CarConfig>(DEFAULT_CAR);
@@ -69,17 +70,18 @@ export default function App() {
 
   return (
     <div className="flex h-screen bg-gray-100 overflow-hidden font-sans">
-      <Sidebar 
-        config={config} 
+      <MobileWarningModal />
+      <Sidebar
+        config={config}
         trackConfig={trackConfig}
         activeTab={activeTab}
         onTabChange={setActiveTab}
-        onChange={setConfig} 
+        onChange={setConfig}
         onTrackChange={setTrackConfig}
         onRun={handleRun}
         onSave={handleSave}
       />
-      
+
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {activeTab === 'garage' ? (
           <div className="flex-1 p-6 overflow-hidden">
@@ -93,9 +95,9 @@ export default function App() {
                 <Track result={result} isAnimating={isAnimating} track={trackConfig} config={config} />
               </div>
               <div className="xl:col-span-1 h-64">
-                <Leaderboard 
-                  entries={history} 
-                  onDelete={handleDelete} 
+                <Leaderboard
+                  entries={history}
+                  onDelete={handleDelete}
                   onCompare={handleCompare}
                   comparingId={comparingId}
                 />
@@ -104,9 +106,9 @@ export default function App() {
 
             {/* Bottom Section: Detailed Results */}
             <div className="h-96">
-               <Results result={result} comparisonResult={comparisonResult} history={history} />
+              <Results result={result} comparisonResult={comparisonResult} history={history} />
             </div>
-            
+
             <PhysicsDebug energy={result?.energy} />
           </div>
         )}
