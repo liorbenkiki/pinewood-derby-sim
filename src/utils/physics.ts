@@ -4,8 +4,13 @@ import { PHYSICS, DEFAULT_TRACK } from '../constants';
 // Helper to get track height at position x
 function getTrackHeight(x: number, track: TrackConfig): number {
   const rampLength = track.lengthMeters - track.flatLengthMeters;
-  if (x < 0) return track.startHeightMeters; // Should not happen but clamp
   if (x >= rampLength) return 0;
+
+  if (x < 0) {
+    // The track extends backwards from the starting pin linearly with the initial slope
+    const initial_slope = -2 * track.startHeightMeters / rampLength;
+    return track.startHeightMeters + x * initial_slope;
+  }
 
   // Parabolic profile: y = h * (1 - x/L)^2
   const p = x / rampLength;
@@ -18,9 +23,8 @@ function getTrackAngle(x: number, track: TrackConfig): number {
   if (x >= rampLength) return 0;
 
   // y = h * (1 - x/L)^2
-  // dy/dx = 2h * (1 - x/L) * (-1/L) = -2h/L * (1 - x/L)
-  // Since x is arc length, dy/dx is sin(theta), not tan(theta)
-  const p = x / rampLength;
+  // dy/dx = -2h/L * (1 - x/L)
+  const p = x < 0 ? 0 : x / rampLength; // Constant slope behind the pin
   const dydx = -2 * track.startHeightMeters * (1 - p) / rampLength;
   // Clamp value to [-1, 1] for asin safety, though geometry shouldn't exceed vertical
   const val = Math.max(-1, Math.min(1, Math.abs(dydx)));
@@ -56,6 +60,13 @@ export function simulateRace(car: CarConfig, track: TrackConfig = DEFAULT_TRACK,
   const startPosCOM = comOffset;
   const startHeightCOM = getTrackHeight(startPosCOM, track) + heightM;
   const initialPE = mass * PHYSICS.GRAVITY * startHeightCOM;
+
+  // Effective mass for acceleration (includes rotational inertia)
+  // I = 0.5 * m * r^2. Effective mass of each wheel = 0.5 * m
+  // numWheels = 4 (or 3 if raised)
+  const wheelMassKg = 0.0025; // 2.5g per wheel
+  const numWheels = car.raisedWheel ? 3 : 4;
+  const effectiveMass = mass + numWheels * 0.5 * wheelMassKg;
 
   let workFriction = 0;
   let workDrag = 0;
@@ -101,7 +112,8 @@ export function simulateRace(car: CarConfig, track: TrackConfig = DEFAULT_TRACK,
       // If heightM is 1.0 inches (0.0254m), multiplier is larger.
       const heightStabilityPenalty = 1 + (heightM / (0.6 * PHYSICS.IN_TO_M) - 1.0) * 0.2;
 
-      const stability = normalizedWheelbase * cantStabilityFactor / heightStabilityPenalty;
+      // Wheelbase has a squared effect on stability to make it matter more
+      const stability = Math.pow(normalizedWheelbase, 2) * cantStabilityFactor / heightStabilityPenalty;
 
       // Formula: F_scrub = 0.5 * mass * v^2 * (Base + Bias*|bias|) / Stability
       const baseWobble = car.scrubBase;
@@ -112,7 +124,8 @@ export function simulateRace(car: CarConfig, track: TrackConfig = DEFAULT_TRACK,
     }
 
     const F_net_COM = F_gravity_COM - F_friction_COM - F_drag - F_scrub;
-    const acc_COM = F_net_COM / mass;
+    // Use effectiveMass to account for rotational inertia slowing linear acceleration
+    const acc_COM = F_net_COM / effectiveMass;
 
     // Integration
     const velocity_new = velocity + acc_COM * dt;
@@ -144,8 +157,6 @@ export function simulateRace(car: CarConfig, track: TrackConfig = DEFAULT_TRACK,
   // Rotational KE
   let rotationalKE = 0;
   if (!car.losslessTest) {
-    const wheelMassKg = 0.0025; // 2.5g per wheel
-    const numWheels = 4;
     rotationalKE = numWheels * 0.25 * wheelMassKg * velocity * velocity;
   }
 
