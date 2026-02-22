@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { CarConfig, TrackConfig, BodyStyle } from '../types';
 import { Slider, Toggle } from './ui/Controls';
+import { XYWeightSelector } from './ui/XYWeightSelector';
 import { TRACK_PRESETS } from '../constants';
 import { calibrateFriction } from '../utils/physics';
 
@@ -29,18 +30,18 @@ export function Sidebar({ config, trackConfig, activeTab, onTabChange, onChange,
     onChange({ ...config, bodyStyle: style });
   };
 
-  const toggleSticker = (sticker: string) => {
-    const newStickers = config.stickers.includes(sticker)
-      ? config.stickers.filter(s => s !== sticker)
-      : [...config.stickers, sticker];
-    update('stickers', newStickers);
+  const addSticker = (sticker: string) => {
+    update('stickers', [...config.stickers, sticker]);
+  };
+
+  const clearStickers = () => {
+    update('stickers', []);
   };
 
   // Simple Mode Handlers
-  const handleWeightDistSimple = (val: string) => {
-    if (val === 'forward') update('weightDistribution', 0.8);
-    if (val === 'balanced') update('weightDistribution', 0.5);
-    if (val === 'back') update('weightDistribution', 0.2);
+  const handleXYWeightChange = (x: number, y: number) => {
+    const newWeightDist = (x / 8) + 0.5;
+    onChange({ ...config, weightDistribution: newWeightDist, weightHeight: y });
   };
 
   const handleCantSimple = (val: string) => {
@@ -69,7 +70,7 @@ export function Sidebar({ config, trackConfig, activeTab, onTabChange, onChange,
   const runCalibration = () => {
     const time = parseFloat(calibrationTime);
     if (isNaN(time) || time <= 0) return;
-    
+
     const mu = calibrateFriction(time, config, trackConfig);
     setCalibratedMu(mu);
   };
@@ -81,25 +82,22 @@ export function Sidebar({ config, trackConfig, activeTab, onTabChange, onChange,
         <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg mb-6">
           <button
             onClick={() => onTabChange('car')}
-            className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-colors ${
-              activeTab === 'car' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'
-            }`}
+            className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-colors ${activeTab === 'car' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'
+              }`}
           >
             Car
           </button>
           <button
             onClick={() => onTabChange('track')}
-            className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-colors ${
-              activeTab === 'track' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'
-            }`}
+            className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-colors ${activeTab === 'track' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'
+              }`}
           >
             Track
           </button>
           <button
             onClick={() => onTabChange('garage')}
-            className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-colors ${
-              activeTab === 'garage' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'
-            }`}
+            className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-colors ${activeTab === 'garage' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'
+              }`}
           >
             Garage
           </button>
@@ -125,7 +123,7 @@ export function Sidebar({ config, trackConfig, activeTab, onTabChange, onChange,
           </div>
         )}
       </div>
-      
+
       <div className="flex-1 px-6 space-y-6 overflow-y-auto">
         {activeTab === 'car' && (
           <>
@@ -140,27 +138,12 @@ export function Sidebar({ config, trackConfig, activeTab, onTabChange, onChange,
                     min={1} max={10} step={0.1} unit="oz"
                     onChange={(v) => update('totalWeightOz', v)}
                   />
-                  
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Weight Distribution</label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {['forward', 'balanced', 'back'].map((opt) => (
-                        <button
-                          key={opt}
-                          onClick={() => handleWeightDistSimple(opt)}
-                          className={`py-2 text-xs border rounded-md capitalize ${
-                            (opt === 'forward' && config.weightDistribution > 0.6) ||
-                            (opt === 'balanced' && config.weightDistribution >= 0.4 && config.weightDistribution <= 0.6) ||
-                            (opt === 'back' && config.weightDistribution < 0.4)
-                              ? 'bg-indigo-50 border-indigo-500 text-indigo-700 font-medium'
-                              : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
-                          }`}
-                        >
-                          {opt === 'back' ? 'Back-Heavy' : opt}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+
+                  <XYWeightSelector
+                    x={Math.max(-4, Math.min(4, Math.round((config.weightDistribution - 0.5) * 8)))}
+                    y={Math.max(-4, Math.min(4, config.weightHeight || 0))}
+                    onChange={handleXYWeightChange}
+                  />
 
                   <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Wheelbase</label>
@@ -169,13 +152,12 @@ export function Sidebar({ config, trackConfig, activeTab, onTabChange, onChange,
                         <button
                           key={opt}
                           onClick={() => handleWheelbaseSimple(opt)}
-                          className={`py-2 text-xs border rounded-md capitalize ${
-                            (opt === 'short' && config.wheelbase < 4.2) ||
+                          className={`py-2 text-xs border rounded-md capitalize ${(opt === 'short' && config.wheelbase < 4.2) ||
                             (opt === 'standard' && config.wheelbase >= 4.2 && config.wheelbase <= 4.6) ||
                             (opt === 'extended' && config.wheelbase > 4.6)
-                              ? 'bg-indigo-50 border-indigo-500 text-indigo-700 font-medium'
-                              : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
-                          }`}
+                            ? 'bg-indigo-50 border-indigo-500 text-indigo-700 font-medium'
+                            : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                            }`}
                         >
                           {opt}
                         </button>
@@ -191,21 +173,19 @@ export function Sidebar({ config, trackConfig, activeTab, onTabChange, onChange,
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         onClick={() => update('axleSanded', !config.axleSanded)}
-                        className={`py-2 text-xs border rounded-md capitalize ${
-                          config.axleSanded
-                            ? 'bg-indigo-50 border-indigo-500 text-indigo-700 font-medium'
-                            : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
-                        }`}
+                        className={`py-2 text-xs border rounded-md capitalize ${config.axleSanded
+                          ? 'bg-indigo-50 border-indigo-500 text-indigo-700 font-medium'
+                          : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                          }`}
                       >
                         Sanded
                       </button>
                       <button
                         onClick={() => update('graphite', !config.graphite)}
-                        className={`py-2 text-xs border rounded-md capitalize ${
-                          config.graphite
-                            ? 'bg-indigo-50 border-indigo-500 text-indigo-700 font-medium'
-                            : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
-                        }`}
+                        className={`py-2 text-xs border rounded-md capitalize ${config.graphite
+                          ? 'bg-indigo-50 border-indigo-500 text-indigo-700 font-medium'
+                          : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                          }`}
                       >
                         Graphite
                       </button>
@@ -219,13 +199,12 @@ export function Sidebar({ config, trackConfig, activeTab, onTabChange, onChange,
                         <button
                           key={opt}
                           onClick={() => handleCantSimple(opt)}
-                          className={`py-2 text-xs border rounded-md capitalize ${
-                            (opt === 'none' && config.wheelCant < 0.5) ||
+                          className={`py-2 text-xs border rounded-md capitalize ${(opt === 'none' && config.wheelCant < 0.5) ||
                             (opt === 'slight' && config.wheelCant >= 0.5 && config.wheelCant < 2.5) ||
                             (opt === 'aggressive' && config.wheelCant >= 2.5)
-                              ? 'bg-indigo-50 border-indigo-500 text-indigo-700 font-medium'
-                              : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
-                          }`}
+                            ? 'bg-indigo-50 border-indigo-500 text-indigo-700 font-medium'
+                            : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                            }`}
                         >
                           {opt}
                         </button>
@@ -343,11 +322,11 @@ export function Sidebar({ config, trackConfig, activeTab, onTabChange, onChange,
               <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Track Configuration</h3>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Preset</label>
-                <select 
+                <select
                   className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
                   onChange={handlePresetChange}
-                  value={TRACK_PRESETS.find(p => 
-                    p.lengthMeters === trackConfig.lengthMeters && 
+                  value={TRACK_PRESETS.find(p =>
+                    p.lengthMeters === trackConfig.lengthMeters &&
                     p.startHeightMeters === trackConfig.startHeightMeters
                   )?.name || ""}
                 >
@@ -409,7 +388,7 @@ export function Sidebar({ config, trackConfig, activeTab, onTabChange, onChange,
                     </button>
                   </div>
                 </div>
-                
+
                 {calibratedMu !== null && (
                   <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-md">
                     <div className="text-xs text-indigo-800 font-medium">Estimated Friction (μ)</div>
@@ -431,11 +410,10 @@ export function Sidebar({ config, trackConfig, activeTab, onTabChange, onChange,
                   <button
                     key={style}
                     onClick={() => handleBodyStyleChange(style)}
-                    className={`p-3 border rounded-lg flex flex-col items-center space-y-2 transition-all ${
-                      config.bodyStyle === style
-                        ? 'bg-indigo-50 border-indigo-500 ring-1 ring-indigo-500'
-                        : 'bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                    }`}
+                    className={`p-3 border rounded-lg flex flex-col items-center space-y-2 transition-all ${config.bodyStyle === style
+                      ? 'bg-indigo-50 border-indigo-500 ring-1 ring-indigo-500'
+                      : 'bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
                   >
                     <div className="w-full h-12 bg-gray-100 rounded flex items-center justify-center text-2xl">
                       {style === 'wedge' && '📐'}
@@ -462,9 +440,8 @@ export function Sidebar({ config, trackConfig, activeTab, onTabChange, onChange,
                   <button
                     key={color}
                     onClick={() => update('color', color)}
-                    className={`w-10 h-10 rounded-full border-2 shadow-sm transition-transform hover:scale-110 ${
-                      config.color === color ? 'border-gray-900 scale-110 ring-2 ring-offset-2 ring-gray-400' : 'border-transparent'
-                    }`}
+                    className={`w-10 h-10 rounded-full border-2 shadow-sm transition-transform hover:scale-110 ${config.color === color ? 'border-gray-900 scale-110 ring-2 ring-offset-2 ring-gray-400' : 'border-transparent'
+                      }`}
                     style={{ backgroundColor: color }}
                     aria-label={`Select color ${color}`}
                   />
@@ -485,17 +462,21 @@ export function Sidebar({ config, trackConfig, activeTab, onTabChange, onChange,
                 ].map((sticker) => (
                   <button
                     key={sticker.id}
-                    onClick={() => toggleSticker(sticker.id)}
-                    className={`py-2 px-1 text-sm border rounded-md transition-colors ${
-                      config.stickers.includes(sticker.id)
-                        ? 'bg-indigo-50 border-indigo-500 text-indigo-700 font-medium'
-                        : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
-                    }`}
+                    onClick={() => addSticker(sticker.id)}
+                    className="py-2 px-1 text-sm border rounded-md transition-colors bg-white border-gray-200 text-gray-600 hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-600"
                   >
                     {sticker.label}
                   </button>
                 ))}
               </div>
+              {config.stickers.length > 0 && (
+                <button
+                  onClick={clearStickers}
+                  className="mt-3 w-full py-1.5 text-xs text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-md transition-colors"
+                >
+                  Clear All Stickers
+                </button>
+              )}
             </section>
           </div>
         )}

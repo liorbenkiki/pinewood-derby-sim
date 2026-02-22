@@ -16,6 +16,7 @@ export const DEFAULT_CAR: import('./types').CarConfig = {
   name: "New Car",
   totalWeightOz: 5.0,
   weightDistribution: 0.5, // Balanced (50% rear)
+  weightHeight: 0,
   leftRightBias: 0.0,
   axleSanded: false,
   graphite: false,

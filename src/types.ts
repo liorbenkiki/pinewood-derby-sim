@@ -4,6 +4,7 @@ export interface CarConfig {
   name: string;
   totalWeightOz: number; // Max 5.0 usually
   weightDistribution: number; // 0 (rear) to 1 (front)
+  weightHeight: number; // -4 (top) to 4 (bottom)
   leftRightBias: number; // -1 (left) to 1 (right), 0 is center
   axleSanded: boolean; // True if axles are deburred/polished
   graphite: boolean; // True if graphite lubrication is applied
@@ -12,7 +13,7 @@ export interface CarConfig {
   wheelbase: number; // Inches, standard ~4.375
   dragCoefficient: number; // 0.3 (streamlined) to 0.6 (block)
   losslessTest: boolean; // Debug: Set all losses to 0
-  
+
   // Visuals
   color: string;
   bodyStyle: BodyStyle;
